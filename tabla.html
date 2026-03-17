@@ -47,6 +47,7 @@
 
 <script>
 const data = JSON.parse(localStorage.getItem("reportes"));
+// Si no hay datos o es admin, redirigir (el admin usa su propia página sin restricciones)
 if (!data || data.admin) window.location.href = "/";
 
 document.getElementById("inst").textContent = data.institucion;
@@ -60,22 +61,38 @@ document.getElementById("thead").innerHTML =
 let pagina = 1;
 const porPagina = 30;
 
-// FUNCIÓN DE FILTRO POR ANTIGÜEDAD (SOLO PARA USUARIOS)
-function esVisibleParaUsuario(estatus, fechaTexto) {
-    if (estatus !== "Entregado") return true; // Los pendientes siempre se ven
+// FUNCIÓN PARA VERIFICAR SI EL REGISTRO ES VISIBLE SEGÚN LA COLUMNA L (Índice 11)
+function verificarVisibilidad(fila) {
+    const estatus = (fila[12] || "").trim(); // Columna M
+    const fechaTexto = (fila[11] || "").trim(); // Columna L
+
+    // Si es Pendiente, siempre es visible
+    if (estatus !== "Entregado") return true;
+
+    // Si es Entregado pero no tiene fecha, por seguridad no lo mostramos o cámbialo a true si prefieres
     if (!fechaTexto) return false;
 
-    // Calculamos la fecha limite (hoy menos 30 días)
-    const hoy = new Date();
-    const limite = new Date();
-    limite.setDate(hoy.getDate() - 30);
+    try {
+        // Formato esperado: DD/MM/YYYY
+        const partes = fechaTexto.split('/');
+        if (partes.length === 3) {
+            const dia = parseInt(partes[0]);
+            const mes = parseInt(partes[1]) - 1; // Enero es 0
+            const anio = parseInt(partes[2]);
+            
+            const fechaEntrega = new Date(anio, mes, dia);
+            const hoy = new Date();
+            
+            // Calculamos la diferencia en milisegundos
+            const diferenciaMs = hoy - fechaEntrega;
+            // Convertimos 30 días a milisegundos (30 días * 24h * 60m * 60s * 1000ms)
+            const treintaDiasMs = 30 * 24 * 60 * 60 * 1000;
 
-    // Formato esperado en Excel: DD/MM/YYYY
-    const partes = fechaTexto.split('/');
-    if (partes.length === 3) {
-        const fechaEntrega = new Date(partes[2], partes[1] - 1, partes[0]);
-        // Si la entrega es posterior al límite (menos de un mes), es visible
-        return fechaEntrega >= limite;
+            // Si la diferencia es menor o igual a 30 días, es visible
+            return diferenciaMs <= treintaDiasMs;
+        }
+    } catch (e) {
+        return false;
     }
     return false;
 }
@@ -86,13 +103,11 @@ function renderTabla() {
     const eVal = fe.value;
 
     const filtrados = filas.filter(f => {
-        const est = (f[12] || "").trim(); // Columna M: Estatus
-        const fecha = f[11] || "";        // Columna L: Fecha de Entrega
+        // 1. Aplicar regla de antigüedad de un mes
+        if (!verificarVisibilidad(f)) return false;
 
-        // APLICAR RESTRICCIÓN DE UN MES
-        if (!esVisibleParaUsuario(est, fecha)) return false;
-
-        // FILTROS DE BÚSQUEDA NORMALES
+        // 2. Aplicar filtros de búsqueda del usuario
+        const est = (f[12] || "").trim();
         return (
             f[1].toLowerCase().includes(cVal) &&
             f[9].toLowerCase().includes(fVal) &&
@@ -104,7 +119,7 @@ function renderTabla() {
     const pag = filtrados.slice(inicio, inicio + porPagina);
 
     tbody.innerHTML = pag.map(f => {
-        const est = f[12] || "";
+        const est = (f[12] || "").trim();
         return `<tr class="${est === 'Entregado' ? 'tr-entregado' : ''}">
             ${f.map(c => `<td>${c}</td>`).join("")}
         </tr>`;
