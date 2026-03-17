@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="/static/style.css?v=3">
+    <link rel="stylesheet" href="/static/style.css?v=4">
 </head>
 <body>
 
@@ -19,9 +19,9 @@
     <h2>Panel Administrativo</h2>
 
     <div class="filters">
-        <div><label>Cuenta:</label><input type="text" id="ac" placeholder="Cuenta"></div>
-        <div><label>Folio:</label><input type="text" id="af" placeholder="Folio"></div>
-        <div><label>Institución:</label><input type="text" id="ai" placeholder="Institución"></div>
+        <div><label>Cuenta:</label><input type="text" id="ac"></div>
+        <div><label>Folio:</label><input type="text" id="af"></div>
+        <div><label>Institución:</label><input type="text" id="ai"></div>
         <div>
             <label>Estatus:</label>
             <select id="ae">
@@ -33,7 +33,7 @@
         <button onclick="window.print()" class="btn-pdf">PDF</button>
     </div>
 
-    <div style="overflow-x:auto;">
+    <div class="table-wrapper">
         <table id="ta">
             <thead><tr id="theadA"></tr></thead>
             <tbody id="tbodyA"></tbody>
@@ -52,11 +52,9 @@ if (!dataA || !dataA.admin) window.location.href = "/";
 const headersA = dataA.headers;
 const filasA = dataA.reportes;
 
-// Encabezados
 document.getElementById("theadA").innerHTML =
     headersA.map((h, i) => `<th onclick="ordenarAdmin(${i})">${h}</th>`).join("");
 
-// Paginación
 let paginaA = 1;
 const porPaginaA = 30;
 
@@ -86,7 +84,6 @@ function renderAdmin() {
         </tr>`;
     }).join("");
 
-    // Paginación
     let botones = "";
     const total = Math.ceil(filtrados.length / porPaginaA);
     for (let i = 1; i <= total; i++) {
@@ -98,7 +95,6 @@ function renderAdmin() {
 document.querySelectorAll(".filters input, .filters select")
     .forEach(el => el.addEventListener("input", renderAdmin));
 
-// Ordenamiento
 let ascA = true;
 function ordenarAdmin(n) {
     filasA.sort((a, b) => {
