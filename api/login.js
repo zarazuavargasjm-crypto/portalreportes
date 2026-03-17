@@ -1,13 +1,13 @@
 const { google } = require("googleapis");
 
 // =========================
-// SEGURIDAD
+// SEGURIDAD (SIN CAMBIOS)
 // =========================
 const intentosFallidos = {};
 const bloqueosTemporales = {};
 const bloqueosPermanentes = {};
 const MAX_INTENTOS = 5;
-const TIEMPO_BLOQUEO_MS = 10 * 60 * 1000; // 10 minutos
+const TIEMPO_BLOQUEO_MS = 10 * 60 * 1000;
 const MAX_BLOQUEOS_TEMP = 3;
 
 function getIP(req) {
@@ -53,35 +53,26 @@ function registrarFallo(ip) {
 // =========================
 function getClient() {
   const credJson = process.env.GOOGLE_CREDENTIALS;
-  if (!credJson) {
-    console.error("Falta GOOGLE_CREDENTIALS");
-    return null;
-  }
+  if (!credJson) return null;
 
   let cred;
   try {
     cred = JSON.parse(credJson);
   } catch (e) {
-    console.error("GOOGLE_CREDENTIALS no es JSON válido");
     return null;
   }
-
-  const scopes = ["https://www.googleapis.com/auth/spreadsheets.readonly"];
 
   return new google.auth.JWT(
     cred.client_email,
     null,
     cred.private_key,
-    scopes
+    ["https://www.googleapis.com/auth/spreadsheets.readonly"]
   );
 }
 
 async function leerHoja(auth, spreadsheetId, range) {
   const sheets = google.sheets({ version: "v4", auth });
-  const res = await sheets.spreadsheets.values.get({
-    spreadsheetId,
-    range
-  });
+  const res = await sheets.spreadsheets.values.get({ spreadsheetId, range });
   return res.data.values || [];
 }
 
@@ -89,38 +80,25 @@ async function leerHoja(auth, spreadsheetId, range) {
 // HANDLER PRINCIPAL
 // =========================
 module.exports = async (req, res) => {
-  console.log("=== /api/login llamado ===", req.method);
-
   const ip = getIP(req);
   const bloqueo = estaBloqueado(ip);
 
-  if (bloqueo === "permanente") {
+  if (bloqueo === "permanente")
     return res.status(403).json({ ok: false, error: "IP bloqueada permanentemente" });
-  }
 
-  if (bloqueo === "temporal") {
+  if (bloqueo === "temporal")
     return res.status(403).json({ ok: false, error: "IP bloqueada temporalmente" });
-  }
 
-  if (req.method !== "POST") {
+  if (req.method !== "POST")
     return res.status(200).json({ ok: false, error: "Método no permitido" });
-  }
 
   const { usuario, nip } = req.body || {};
-
-  if (!usuario || !nip) {
+  if (!usuario || !nip)
     return res.status(400).json({ ok: false, error: "Faltan datos" });
-  }
 
   const spreadsheetId = process.env.SPREADSHEET_ID;
-  if (!spreadsheetId) {
-    return res.status(500).json({ ok: false, error: "Falta SPREADSHEET_ID" });
-  }
-
   const auth = getClient();
-  if (!auth) {
-    return res.status(500).json({ ok: false, error: "Error con credenciales" });
-  }
+  if (!auth) return res.status(500).json({ ok: false, error: "Error con credenciales" });
 
   try {
     const directorio = await leerHoja(auth, spreadsheetId, "Directorio!A:E");
@@ -130,15 +108,9 @@ module.exports = async (req, res) => {
 
     for (let i = 1; i < directorio.length; i++) {
       const fila = directorio[i];
-      if (fila.length < 5) continue;
-
-      const escuela = fila[0];
-      const user = fila[3];
-      const password = fila[4];
-
-      if (usuario === user && nip === password) {
-        institucion = escuela;
-        esAdmin = escuela === "Administrador";
+      if (fila[3] === usuario && fila[4] === nip) {
+        institucion = fila[0];
+        esAdmin = fila[0] === "Administrador";
         break;
       }
     }
@@ -146,11 +118,7 @@ module.exports = async (req, res) => {
     if (!institucion) {
       registrarFallo(ip);
       registrarIntento(ip, false);
-
-      return res.status(200).json({
-        ok: false,
-        error: "Usuario o NIP incorrectos"
-      });
+      return res.status(200).json({ ok: false, error: "Usuario o NIP incorrectos" });
     }
 
     registrarIntento(ip, true);
@@ -159,16 +127,22 @@ module.exports = async (req, res) => {
     const headers = reportes[0] || [];
     const filas = reportes.slice(1);
 
+    // Asegurar que cada fila tenga al menos 13 columnas
+    const filasNormalizadas = filas.map(f => {
+      while (f.length < 13) f.push("");
+      return f;
+    });
+
     if (esAdmin) {
       return res.status(200).json({
         ok: true,
         admin: true,
         headers,
-        reportes: filas
+        reportes: filasNormalizadas
       });
     }
 
-    const datosUsuario = filas.filter(f => f[5] === institucion);
+    const datosUsuario = filasNormalizadas.filter(f => f[5] === institucion);
 
     return res.status(200).json({
       ok: true,
@@ -179,10 +153,6 @@ module.exports = async (req, res) => {
     });
 
   } catch (e) {
-    console.error("Error leyendo Sheets:", e);
-    return res.status(500).json({
-      ok: false,
-      error: "Error leyendo Google Sheets"
-    });
+    return res.status(500).json({ ok: false, error: "Error leyendo Google Sheets" });
   }
 };
