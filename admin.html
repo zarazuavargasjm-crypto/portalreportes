@@ -6,18 +6,14 @@
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-
 <div class="top-right"><a href="/" class="btn-logout">Cerrar sesión</a></div>
-
 <div class="header-uaeh">
     <h1>Universidad Autónoma del Estado de Hidalgo</h1>
     <h2>Dirección de Administración Escolar</h2>
     <h3>Área de Trámites y Certificados</h3>
 </div>
-
 <div class="table-container">
     <h2>Panel Administrativo</h2>
-
     <div class="filters">
         <div><label>Cuenta:</label><input type="text" id="ac" placeholder="Cuenta"></div>
         <div><label>Folio:</label><input type="text" id="af" placeholder="Folio"></div>
@@ -30,88 +26,75 @@
                 <option value="Pendiente">Pendiente</option>
             </select>
         </div>
-        <button onclick="window.print()" style="height:32px;">PDF</button>
+        <button onclick="window.print()" style="height:32px; align-self:flex-end;">PDF</button>
     </div>
-
     <div style="overflow-x: auto;">
         <table id="ta">
-            <thead><tr id="theadA"></tr></thead>
+            <thead>
+                <tr id="theadA"></tr>
+            </thead>
             <tbody id="tbodyA"></tbody>
         </table>
     </div>
-
-    <div id="paginacionA"></div>
 </div>
-
 <div class="footer-firma">Manuel Zarazúa — abril 2026</div>
-
 <script>
-const data = JSON.parse(localStorage.getItem("reportes"));
-if (!data || !data.admin) window.location.href = "/";
+const dataA = JSON.parse(localStorage.getItem("reportes"));
+if (!dataA || !dataA.admin) window.location.href = "/";
 
-const headers = data.headers;
-const filas = data.reportes;
+const headersA = dataA.headers || [];
+const filasA = dataA.reportes || [];
 
-// Encabezados
 document.getElementById("theadA").innerHTML =
-    headers.map((h, i) => `<th onclick="ordenarAdmin(${i})">${h}</th>`).join("");
+    headersA.map((h, idx) => `<th onclick="ordenarAdmin(${idx})">${h}</th>`).join("");
 
-// Paginación
-let paginaA = 1;
-const porPaginaA = 30;
+const tbodyA = document.getElementById("tbodyA");
+const ac = document.getElementById("ac");
+const af = document.getElementById("af");
+const ai = document.getElementById("ai");
+const ae = document.getElementById("ae");
 
-function renderTablaA() {
+function renderAdmin() {
     const c = ac.value.toLowerCase();
     const f = af.value.toLowerCase();
     const i = ai.value.toLowerCase();
     const e = ae.value;
 
-    let filtrados = filas.filter(r => {
-        const est = r[12] || "";
+    const filtrados = filasA.filter(row => {
+        const est = (row[12] || "").trim();
         return (
-            r[1].toLowerCase().includes(c) &&
-            r[9].toLowerCase().includes(f) &&
-            r[5].toLowerCase().includes(i) &&
+            (row[1] || "").toLowerCase().includes(c) &&
+            (row[9] || "").toLowerCase().includes(f) &&
+            (row[5] || "").toLowerCase().includes(i) &&
             (e === "" || est === e)
         );
     });
 
-    const inicio = (paginaA - 1) * porPaginaA;
-    const pag = filtrados.slice(inicio, inicio + porPaginaA);
-
-    tbodyA.innerHTML = pag.map(f => {
-        const est = f[12] || "";
+    tbodyA.innerHTML = filtrados.map(fila => {
+        const est = fila[12] || "";
         return `<tr class="ra ${est === 'Entregado' ? 'tr-entregado' : ''}">
-            ${f.map(c => `<td>${c}</td>`).join("")}
+            ${fila.map(c => `<td>${c}</td>`).join("")}
         </tr>`;
     }).join("");
-
-    // Paginación
-    let pagBtns = "";
-    const total = Math.ceil(filtrados.length / porPaginaA);
-    for (let i = 1; i <= total; i++) {
-        pagBtns += `<button class="pag-btn" onclick="paginaA=${i};renderTablaA()">${i}</button>`;
-    }
-    paginacionA.innerHTML = pagBtns;
 }
-
-renderTablaA();
 
 document.querySelectorAll(".filters input, .filters select")
-    .forEach(el => el.addEventListener("input", renderTablaA));
+    .forEach(el => el.addEventListener("input", renderAdmin));
 
-// Ordenamiento
-let ascA = true;
+let dirAdminAsc = true;
 function ordenarAdmin(n) {
-    filas.sort((a, b) =>
-        ascA
-            ? (a[n] > b[n] ? 1 : -1)
-            : (a[n] < b[n] ? 1 : -1)
-    );
-    ascA = !ascA;
-    renderTablaA();
+    filasA.sort((a, b) => {
+        const va = (a[n] || "").toString().toLowerCase();
+        const vb = (b[n] || "").toString().toLowerCase();
+        if (va > vb) return dirAdminAsc ? 1 : -1;
+        if (va < vb) return dirAdminAsc ? -1 : 1;
+        return 0;
+    });
+    dirAdminAsc = !dirAdminAsc;
+    renderAdmin();
 }
-</script>
 
+renderAdmin();
+</script>
 </body>
 </html>
