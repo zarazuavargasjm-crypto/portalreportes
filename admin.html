@@ -53,19 +53,18 @@ const headers = data.headers;
 const filas = data.reportes;
 
 // Encabezados
-let thA = "";
-headers.forEach((h, i) => thA += `<th onclick="ordenarAdmin(${i})">${h}</th>`);
-document.getElementById("theadA").innerHTML = thA;
+document.getElementById("theadA").innerHTML =
+    headers.map((h, i) => `<th onclick="ordenarAdmin(${i})">${h}</th>`).join("");
 
 // Paginación
 let paginaA = 1;
 const porPaginaA = 30;
 
 function renderTablaA() {
-    const c = document.getElementById("ac").value.toLowerCase();
-    const f = document.getElementById("af").value.toLowerCase();
-    const i = document.getElementById("ai").value.toLowerCase();
-    const e = document.getElementById("ae").value;
+    const c = ac.value.toLowerCase();
+    const f = af.value.toLowerCase();
+    const i = ai.value.toLowerCase();
+    const e = ae.value;
 
     let filtrados = filas.filter(r => {
         const est = r[12] || "";
@@ -80,15 +79,12 @@ function renderTablaA() {
     const inicio = (paginaA - 1) * porPaginaA;
     const pag = filtrados.slice(inicio, inicio + porPaginaA);
 
-    let rows = "";
-    pag.forEach(f => {
+    tbodyA.innerHTML = pag.map(f => {
         const est = f[12] || "";
-        rows += `<tr class="ra ${est === 'Entregado' ? 'tr-entregado' : ''}">
+        return `<tr class="ra ${est === 'Entregado' ? 'tr-entregado' : ''}">
             ${f.map(c => `<td>${c}</td>`).join("")}
         </tr>`;
-    });
-
-    document.getElementById("tbodyA").innerHTML = rows;
+    }).join("");
 
     // Paginación
     let pagBtns = "";
@@ -96,7 +92,7 @@ function renderTablaA() {
     for (let i = 1; i <= total; i++) {
         pagBtns += `<button class="pag-btn" onclick="paginaA=${i};renderTablaA()">${i}</button>`;
     }
-    document.getElementById("paginacionA").innerHTML = pagBtns;
+    paginacionA.innerHTML = pagBtns;
 }
 
 renderTablaA();
