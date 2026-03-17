@@ -52,19 +52,18 @@ document.getElementById("inst").textContent = data.institucion;
 const headers = data.headers;
 const filas = data.reportes;
 
-// Render encabezados
-let th = "";
-headers.forEach((h, i) => th += `<th onclick="ordenar(${i})">${h}</th>`);
-document.getElementById("thead").innerHTML = th;
+// Encabezados
+document.getElementById("thead").innerHTML =
+    headers.map((h, i) => `<th onclick="ordenar(${i})">${h}</th>`).join("");
 
-// Render filas con paginación
+// Paginación
 let pagina = 1;
 const porPagina = 30;
 
 function renderTabla() {
-    const cVal = document.getElementById("fc").value.toLowerCase();
-    const fVal = document.getElementById("ff").value.toLowerCase();
-    const eVal = document.getElementById("fe").value;
+    const cVal = fc.value.toLowerCase();
+    const fVal = ff.value.toLowerCase();
+    const eVal = fe.value;
 
     let filtrados = filas.filter(f => {
         const est = f[12] || "";
@@ -78,15 +77,12 @@ function renderTabla() {
     const inicio = (pagina - 1) * porPagina;
     const pag = filtrados.slice(inicio, inicio + porPagina);
 
-    let rows = "";
-    pag.forEach(f => {
+    tbody.innerHTML = pag.map(f => {
         const est = f[12] || "";
-        rows += `<tr class="r ${est === 'Entregado' ? 'tr-entregado' : ''}">
+        return `<tr class="r ${est === 'Entregado' ? 'tr-entregado' : ''}">
             ${f.map(c => `<td>${c}</td>`).join("")}
         </tr>`;
-    });
-
-    document.getElementById("tbody").innerHTML = rows;
+    }).join("");
 
     // Paginación
     let pagBtns = "";
@@ -94,14 +90,14 @@ function renderTabla() {
     for (let i = 1; i <= total; i++) {
         pagBtns += `<button class="pag-btn" onclick="pagina=${i};renderTabla()">${i}</button>`;
     }
-    document.getElementById("paginacion").innerHTML = pagBtns;
+    paginacion.innerHTML = pagBtns;
 }
 
 renderTabla();
 
-document.getElementById("fc").oninput = renderTabla;
-document.getElementById("ff").oninput = renderTabla;
-document.getElementById("fe").onchange = renderTabla;
+fc.oninput = renderTabla;
+ff.oninput = renderTabla;
+fe.onchange = renderTabla;
 
 // Ordenamiento original
 let asc = true;
