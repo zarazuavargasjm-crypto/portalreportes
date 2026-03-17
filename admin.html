@@ -10,14 +10,20 @@
 
 <div class="header-uaeh">
     <h2>Panel Administrador</h2>
+    <button id="logout">Cerrar sesión</button>
 </div>
 
-<input id="busqueda" placeholder="Buscar...">
+<input id="busqueda" placeholder="Buscar por texto...">
+<input id="filtroCuenta" placeholder="Número de cuenta">
+<input id="filtroFolio" placeholder="Folio">
+<input id="filtroEscuela" placeholder="Escuela / Instituto">
 
 <table id="tabla">
     <thead id="thead"></thead>
     <tbody id="tbody"></tbody>
 </table>
+
+<div id="paginacion"></div>
 
 <footer>Manuel Zarazua – Abril 2026</footer>
 
@@ -28,30 +34,76 @@ if (!data || !data.reportes || !data.admin) window.location.href = "/";
 const headers = data.headers;
 const filas = data.reportes;
 
-// Encabezados
+document.getElementById("logout").onclick = () => {
+    localStorage.clear();
+    window.location.href = "/";
+};
+
+// Encabezados con ordenamiento
 let th = "";
-headers.forEach(h => th += `<th>${h}</th>`);
+headers.forEach((h, i) => {
+    th += `<th onclick="ordenar(${i})">${h}</th>`;
+});
 document.getElementById("thead").innerHTML = `<tr>${th}</tr>`;
 
-// Filas
-function renderTabla(filtrar = "") {
-    let rows = "";
-    filas.forEach(f => {
-        const texto = f.join(" ").toLowerCase();
-        if (texto.includes(filtrar.toLowerCase())) {
-            let tds = "";
-            f.forEach(c => tds += `<td>${c}</td>`);
-            rows += `<tr>${tds}</tr>`;
-        }
+// Paginación
+let pagina = 1;
+const porPagina = 25;
+
+// Render tabla
+function renderTabla() {
+    const texto = document.getElementById("busqueda").value.toLowerCase();
+    const cuenta = document.getElementById("filtroCuenta").value;
+    const folio = document.getElementById("filtroFolio").value;
+    const escuela = document.getElementById("filtroEscuela").value.toLowerCase();
+
+    let filtrados = filas.filter(f => {
+        const row = f.join(" ").toLowerCase();
+        if (!row.includes(texto)) return false;
+        if (cuenta && f[1] !== cuenta) return false;
+        if (folio && f[0] !== folio) return false;
+        if (escuela && !f[5].toLowerCase().includes(escuela)) return false;
+        return true;
     });
+
+    const inicio = (pagina - 1) * porPagina;
+    const paginados = filtrados.slice(inicio, inicio + porPagina);
+
+    let rows = "";
+    paginados.forEach(f => {
+        let tds = "";
+        f.forEach(c => tds += `<td>${c}</td>`);
+        rows += `<tr>${tds}</tr>`;
+    });
+
     document.getElementById("tbody").innerHTML = rows;
+
+    // Paginación
+    let pagBtns = "";
+    const totalPag = Math.ceil(filtrados.length / porPagina);
+    for (let i = 1; i <= totalPag; i++) {
+        pagBtns += `<button class="pag-btn" onclick="pagina=${i};renderTabla()">${i}</button>`;
+    }
+    document.getElementById("paginacion").innerHTML = pagBtns;
 }
 
 renderTabla();
 
-document.getElementById("busqueda").addEventListener("input", e => {
-    renderTabla(e.target.value);
-});
+document.getElementById("busqueda").oninput = renderTabla;
+document.getElementById("filtroCuenta").oninput = renderTabla;
+document.getElementById("filtroFolio").oninput = renderTabla;
+document.getElementById("filtroEscuela").oninput = renderTabla;
+
+// Ordenamiento
+let asc = true;
+function ordenar(col) {
+    filas.sort((a, b) => asc
+        ? (a[col] > b[col] ? 1 : -1)
+        : (a[col] < b[col] ? 1 : -1)
+    );
+    asc = !asc;
+    renderTabla();
+}
 </script>
 
 </body>
