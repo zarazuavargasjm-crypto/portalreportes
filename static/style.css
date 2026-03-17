@@ -1,37 +1,56 @@
+/* ======== ESTILOS GENERALES ======== */
 body {
     font-family: Arial, sans-serif;
     margin: 0;
-    padding: 20px;
+    padding: 0;
+    background: #f4f4f4;
 }
 
+/* ======== ENCABEZADO ======== */
 .header-uaeh {
+    background: #7a003c;
+    color: white;
+    padding: 20px;
     text-align: center;
-    margin-bottom: 30px;
 }
 
+/* ======== LOGIN ======== */
 .login-container {
     max-width: 400px;
-    margin: 0 auto;
-    border: 1px solid #ccc;
-    padding: 20px;
-    border-radius: 6px;
+    margin: 40px auto;
+    background: white;
+    padding: 25px;
+    border-radius: 8px;
+    box-shadow: 0 0 10px #0002;
 }
 
 .login-container label {
     display: block;
     margin-top: 10px;
+    font-weight: bold;
 }
 
 .login-container input {
     width: 100%;
     padding: 8px;
     margin-top: 4px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
 }
 
 .login-container button {
     margin-top: 15px;
     width: 100%;
     padding: 10px;
+    background: #7a003c;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.login-container button:hover {
+    background: #5c002d;
 }
 
 .error {
@@ -39,14 +58,41 @@ body {
     text-align: center;
 }
 
-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 20px;
+/* ======== TABLAS ======== */
+#busqueda {
+    width: 300px;
+    padding: 8px;
+    margin: 20px;
+    border: 1px solid #aaa;
+    border-radius: 4px;
 }
 
-th, td {
+table {
+    width: 95%;
+    margin: 0 auto;
+    border-collapse: collapse;
+    background: white;
+}
+
+th {
+    background: #7a003c;
+    color: white;
+    padding: 8px;
+    font-size: 13px;
+}
+
+td {
     border: 1px solid #ccc;
     padding: 6px;
     font-size: 12px;
+}
+
+/* ======== PIE DE PÁGINA ======== */
+footer {
+    margin-top: 40px;
+    text-align: center;
+    padding: 15px;
+    background: #7a003c;
+    color: white;
+    font-size: 13px;
 }
