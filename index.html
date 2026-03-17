@@ -30,6 +30,8 @@
     </form>
 </div>
 
+<footer>Manuel Zarazua – Abril 2026</footer>
+
 <script>
 document.getElementById("loginForm").addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -46,7 +48,7 @@ document.getElementById("loginForm").addEventListener("submit", async (e) => {
     const data = await res.json();
 
     if (!data.ok) {
-        document.getElementById("error").textContent = data.error || "Error en el inicio de sesión";
+        document.getElementById("error").textContent = data.error;
         return;
     }
 
