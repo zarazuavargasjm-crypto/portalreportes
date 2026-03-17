@@ -15,32 +15,37 @@ function getIP(req) {
   return forwarded ? forwarded.split(',')[0].trim() : req.socket.remoteAddress || "desconocida";
 }
 
-// FUNCIÓN DE REGISTRO: Formato DD/MM/YYYY HH:MM:SS y SALTO DE FILA OBLIGATORIO
+// FUNCIÓN DE REGISTRO: Garantiza el histórico buscando la última fila vacía
 async function registrarEnSheets(auth, spreadsheetId, usuario, ip, tipo, institucion) {
   try {
     const sheets = google.sheets({ version: "v4", auth });
     
-    // Ajuste a zona horaria México (UTC-6)
+    // 1. Obtener todas las filas actuales para saber cuál es la última
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId,
+      range: "Registro de consultas!A:A",
+    });
+    const filasExistentes = response.data.values ? response.data.values.length : 0;
+    const proximaFila = filasExistentes + 1;
+
+    // 2. Preparar fecha en formato DD/MM/YYYY HH:MM:SS
     const ahora = new Date();
     const fechaMX = new Date(ahora.getTime() - (6 * 60 * 60 * 1000));
-    
     const dia = String(fechaMX.getDate()).padStart(2, '0');
     const mes = String(fechaMX.getMonth() + 1).padStart(2, '0');
     const anio = fechaMX.getFullYear();
     const hora = String(fechaMX.getHours()).padStart(2, '0');
     const min = String(fechaMX.getMinutes()).padStart(2, '0');
     const seg = String(fechaMX.getSeconds()).padStart(2, '0');
-    
     const fechaFormatoFinal = `${dia}/${mes}/${anio} ${hora}:${min}:${seg}`;
-    
+
+    // 3. Escribir en la fila específica calculada
     const values = [[fechaFormatoFinal, usuario || "No provisto", ip, tipo, institucion || "-"]];
     
-    // CONFIGURACIÓN CRÍTICA: Se usa range "A:E" y se fuerza INSERT_ROWS para no borrar nada
-    await sheets.spreadsheets.values.append({
+    await sheets.spreadsheets.values.update({
       spreadsheetId,
-      range: "Registro de consultas!A:E",
+      range: `Registro de consultas!A${proximaFila}`,
       valueInputOption: "RAW",
-      insertDataOption: "INSERT_ROWS",
       requestBody: { values }
     });
   } catch (e) {
@@ -104,7 +109,6 @@ module.exports = async (req, res) => {
   if (req.method !== "POST") return res.status(200).json({ ok: false, error: "Método no permitido" });
 
   const { usuario, nip } = req.body || {};
-  
   const spreadsheetId = process.env.SPREADSHEET_ID;
   const auth = getClient();
   if (!auth || !spreadsheetId) return res.status(500).json({ ok: false, error: "Error de configuración" });
@@ -118,7 +122,6 @@ module.exports = async (req, res) => {
     for (let i = 1; i < directorio.length; i++) {
       const fila = directorio[i];
       if (fila.length < 5) continue;
-      
       if (usuario === fila[3]) {
         usuarioEncontrado = true;
         if (nip === fila[4]) {
