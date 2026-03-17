@@ -60,6 +60,16 @@ document.getElementById("thead").innerHTML =
 let pagina = 1;
 const porPagina = 30;
 
+// Función para saber si un entregado tiene más de 1 mes
+function esAntiguo(fechaStr) {
+    if (!fechaStr) return false;
+    const fecha = new Date(fechaStr);
+    if (isNaN(fecha)) return false;
+    const hoy = new Date();
+    const diff = hoy - fecha;
+    return diff > 30 * 24 * 60 * 60 * 1000;
+}
+
 function renderTabla() {
     const cVal = fc.value.toLowerCase();
     const fVal = ff.value.toLowerCase();
@@ -67,6 +77,11 @@ function renderTabla() {
 
     let filtrados = filas.filter(f => {
         const est = f[12] || "";
+        const fechaEntrega = f[11] || "";
+
+        // Ocultar entregados > 1 mes SOLO usuarios
+        if (est === "Entregado" && esAntiguo(fechaEntrega)) return false;
+
         return (
             f[1].toLowerCase().includes(cVal) &&
             f[9].toLowerCase().includes(fVal) &&
