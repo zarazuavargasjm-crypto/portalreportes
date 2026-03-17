@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="/static/style.css?v=4">
 </head>
 <body>
 
@@ -13,18 +13,18 @@
     <h3>Área de Trámites y Certificados</h3>
 </div>
 
-<div class="login-container">
+<div class="login-box">
     <h2>Acceso al Portal</h2>
-    <p id="error" style="color:red; text-align:center; display:none;"></p>
+    <p id="error" class="error-msg" style="display:none;"></p>
 
     <form id="loginForm">
         <label>Usuario</label>
-        <input name="usuario" id="usuario" placeholder="Tu usuario" required>
+        <input name="usuario" id="usuario" required>
 
         <label>NIP</label>
-        <input name="nip" id="nip" type="password" placeholder="Tu NIP" required>
+        <input name="nip" id="nip" type="password" required>
 
-        <button type="submit">Entrar</button>
+        <button type="submit" class="btn-institucional">Entrar</button>
     </form>
 </div>
 
@@ -34,8 +34,8 @@
 document.getElementById("loginForm").addEventListener("submit", async (e) => {
     e.preventDefault();
 
-    const usuario = document.getElementById("usuario").value;
-    const nip = document.getElementById("nip").value;
+    const usuario = usuario.value;
+    const nip = nip.value;
     const error = document.getElementById("error");
 
     error.style.display = "none";
