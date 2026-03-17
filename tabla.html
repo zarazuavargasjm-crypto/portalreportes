@@ -14,8 +14,8 @@
     <h1>Universidad Autónoma del Estado de Hidalgo</h1>
     <h2>Dirección de Administración Escolar</h2>
     <h3>Área de Trámites y Certificados</h3>
-    <h4>Portal de consulta de trámites</h4>
 </div>
+<div class="subtitulo-portal">Portal de consulta de trámites</div>
 
 <div class="table-container">
     <h2>Institución: <span id="inst"></span></h2>
@@ -43,14 +43,13 @@
     <div id="paginacion"></div>
 </div>
 
-<div class="footer-firma">Manuel Zarazúa — abril 2026 · Portal de certificados</div>
+<div class="footer-firma">Manuel Zarazúa — abril 2026</div>
 
 <script>
 const data = JSON.parse(localStorage.getItem("reportes"));
 if (!data || data.admin) window.location.href = "/";
 
 document.getElementById("inst").textContent = data.institucion;
-
 const headers = data.headers;
 const filas = data.reportes;
 
@@ -75,9 +74,7 @@ function renderTabla() {
     const filtrados = filas.filter(f => {
         const est = f[12] || "";
         const fecha = f[11] || "";
-
         if (est === "Entregado" && esAntiguo(fecha)) return false;
-
         return (
             f[1].toLowerCase().includes(cVal) &&
             f[9].toLowerCase().includes(fVal) &&
@@ -119,9 +116,7 @@ function ordenar(n) {
     asc = !asc;
     renderTabla();
 }
-
 renderTabla();
 </script>
-
 </body>
 </html>
