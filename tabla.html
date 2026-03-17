@@ -8,22 +8,26 @@
 </head>
 <body>
 
-<h2 id="titulo"></h2>
+<div class="header-uaeh">
+    <h2 id="titulo"></h2>
+</div>
+
+<input id="busqueda" placeholder="Buscar...">
 
 <table id="tabla">
     <thead id="thead"></thead>
     <tbody id="tbody"></tbody>
 </table>
 
+<footer>Manuel Zarazua – Abril 2026</footer>
+
 <script>
 const data = JSON.parse(localStorage.getItem("reportes"));
-if (!data || !data.reportes) {
-    window.location.href = "/";
-}
+if (!data || !data.reportes) window.location.href = "/";
 
 const headers = data.headers;
 const filas = data.reportes;
-const institucion = data.institucion || "";
+const institucion = data.institucion;
 
 document.getElementById("titulo").textContent =
     "Reportes de " + institucion;
@@ -34,13 +38,24 @@ headers.forEach(h => th += `<th>${h}</th>`);
 document.getElementById("thead").innerHTML = `<tr>${th}</tr>`;
 
 // Filas
-let rows = "";
-filas.forEach(f => {
-    let tds = "";
-    f.forEach(c => tds += `<td>${c}</td>`);
-    rows += `<tr>${tds}</tr>`;
+function renderTabla(filtrar = "") {
+    let rows = "";
+    filas.forEach(f => {
+        const texto = f.join(" ").toLowerCase();
+        if (texto.includes(filtrar.toLowerCase())) {
+            let tds = "";
+            f.forEach(c => tds += `<td>${c}</td>`);
+            rows += `<tr>${tds}</tr>`;
+        }
+    });
+    document.getElementById("tbody").innerHTML = rows;
+}
+
+renderTabla();
+
+document.getElementById("busqueda").addEventListener("input", e => {
+    renderTabla(e.target.value);
 });
-document.getElementById("tbody").innerHTML = rows;
 </script>
 
 </body>
