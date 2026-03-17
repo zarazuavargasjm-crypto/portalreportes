@@ -15,7 +15,7 @@ function getIP(req) {
   return forwarded ? forwarded.split(',')[0].trim() : req.socket.remoteAddress || "desconocida";
 }
 
-// FUNCIÓN DE REGISTRO: Formato DD/MM/YYYY HH:MM:SS en FILA NUEVA
+// FUNCIÓN DE REGISTRO: Formato DD/MM/YYYY HH:MM:SS y SALTO DE FILA OBLIGATORIO
 async function registrarEnSheets(auth, spreadsheetId, usuario, ip, tipo, institucion) {
   try {
     const sheets = google.sheets({ version: "v4", auth });
@@ -24,7 +24,6 @@ async function registrarEnSheets(auth, spreadsheetId, usuario, ip, tipo, institu
     const ahora = new Date();
     const fechaMX = new Date(ahora.getTime() - (6 * 60 * 60 * 1000));
     
-    // Formato manual: Día/Mes/Año Hora:Minuto:Segundo
     const dia = String(fechaMX.getDate()).padStart(2, '0');
     const mes = String(fechaMX.getMonth() + 1).padStart(2, '0');
     const anio = fechaMX.getFullYear();
@@ -36,10 +35,10 @@ async function registrarEnSheets(auth, spreadsheetId, usuario, ip, tipo, institu
     
     const values = [[fechaFormatoFinal, usuario || "No provisto", ip, tipo, institucion || "-"]];
     
-    // .append con range "A1" busca automáticamente la primera fila libre al final de la hoja
+    // CONFIGURACIÓN CRÍTICA: Se usa range "A:E" y se fuerza INSERT_ROWS para no borrar nada
     await sheets.spreadsheets.values.append({
       spreadsheetId,
-      range: "Registro de consultas!A1",
+      range: "Registro de consultas!A:E",
       valueInputOption: "RAW",
       insertDataOption: "INSERT_ROWS",
       requestBody: { values }
