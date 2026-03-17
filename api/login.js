@@ -1,182 +1,139 @@
-/* ======== GENERALES ======== */
-body {
-    font-family: Arial, sans-serif;
-    background: #F2F2F2;
-    padding: 40px;
-    margin: 0;
+const { google } = require("googleapis");
+
+// =========================
+// SEGURIDAD
+// =========================
+const intentosFallidos = {};
+const bloqueosTemporales = {};
+const bloqueosPermanentes = {};
+const MAX_INTENTOS = 5;
+const TIEMPO_BLOQUEO_MS = 10 * 60 * 1000;
+const MAX_BLOQUEOS_TEMP = 3;
+
+function getIP(req) {
+  return req.headers["x-forwarded-for"] || req.connection?.remoteAddress || "desconocida";
 }
 
-/* ======== ENCABEZADO INSTITUCIONAL ======== */
-.header-uaeh {
-    text-align: center;
-    margin-bottom: 25px;
-    color: #4D4D4F;
+function estaBloqueado(ip) {
+  if (bloqueosPermanentes[ip] === true) return "permanente";
+  const bloqueo = bloqueosTemporales[ip];
+  if (!bloqueo) return false;
+  if (Date.now() > bloqueo) {
+    delete bloqueosTemporales[ip];
+    return false;
+  }
+  return "temporal";
 }
 
-.header-uaeh h1 {
-    margin: 0;
-    font-size: 24px;
-    color: #8A1538;
-    font-weight: bold;
+function registrarFallo(ip) {
+  intentosFallidos[ip] = (intentosFallidos[ip] || 0) + 1;
+  if (intentosFallidos[ip] >= MAX_INTENTOS) {
+    intentosFallidos[ip] = 0;
+    bloqueosTemporales[ip] = Date.now() + TIEMPO_BLOQUEO_MS;
+    bloqueosPermanentes[ip] = (bloqueosPermanentes[ip] || 0) + 1;
+    if (bloqueosPermanentes[ip] >= MAX_BLOQUEOS_TEMP) {
+      bloqueosPermanentes[ip] = true;
+    }
+  }
 }
 
-.header-uaeh h2 {
-    margin: 5px 0 0 0;
-    font-size: 18px;
-    font-weight: 600;
+// =========================
+// GOOGLE SHEETS (Optimizado)
+// =========================
+function getClient() {
+  const credJson = process.env.GOOGLE_CREDENTIALS;
+  if (!credJson) return null;
+
+  try {
+    const cred = JSON.parse(credJson);
+    const scopes = ["https://www.googleapis.com/auth/spreadsheets.readonly"];
+    
+    // CORRECCIÓN CRÍTICA: Asegurar que los saltos de línea de la llave privada se lean bien
+    const privateKey = cred.private_key.replace(/\\n/g, '\n');
+
+    return new google.auth.JWT(
+      cred.client_email,
+      null,
+      privateKey,
+      scopes
+    );
+  } catch (e) {
+    console.error("Error en credenciales:", e);
+    return null;
+  }
 }
 
-.header-uaeh h3, .header-uaeh h4 {
-    margin: 3px 0 0 0;
-    font-size: 16px;
-    font-weight: 500;
+async function leerHoja(auth, spreadsheetId, range) {
+  const sheets = google.sheets({ version: "v4", auth });
+  const res = await sheets.spreadsheets.values.get({
+    spreadsheetId,
+    range
+  });
+  return res.data.values || [];
 }
 
-/* ======== BOTÓN CERRAR SESIÓN (SUPERIOR DERECHA) ======== */
-.top-right {
-    position: fixed;
-    top: 15px;
-    right: 20px;
-    z-index: 10000;
-}
+// =========================
+// HANDLER PRINCIPAL
+// =========================
+module.exports = async (req, res) => {
+  const ip = getIP(req);
+  const bloqueo = estaBloqueado(ip);
 
-.btn-logout {
-    background: #8A1538;
-    color: white !important;
-    padding: 8px 14px;
-    border-radius: 4px;
-    text-decoration: none;
-    font-size: 13px;
-    font-weight: bold;
-    display: inline-block;
-    border: none;
-}
+  if (bloqueo === "permanente") return res.status(403).json({ ok: false, error: "IP bloqueada permanentemente" });
+  if (bloqueo === "temporal") return res.status(403).json({ ok: false, error: "IP bloqueada temporalmente" });
 
-/* ======== LOGIN CONTAINER (CUADRO ORIGINAL) ======== */
-.login-container {
-    max-width: 400px;
-    margin: 0 auto;
-    background: white;
-    padding: 25px;
-    border-radius: 10px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-}
+  if (req.method !== "POST") return res.status(405).json({ ok: false, error: "Método no permitido" });
 
-.login-container label {
-    display: block;
-    margin-top: 15px;
-    color: #4D4D4F;
-}
+  const { usuario, nip } = req.body || {};
+  if (!usuario || !nip) return res.status(400).json({ ok: false, error: "Faltan datos" });
 
-.login-container input {
-    width: 100%;
-    padding: 8px;
-    margin-top: 5px;
-    border-radius: 4px;
-    border: 1px solid #ccc;
-    box-sizing: border-box;
-}
+  const spreadsheetId = process.env.SPREADSHEET_ID;
+  const auth = getClient();
+  
+  if (!auth || !spreadsheetId) return res.status(500).json({ ok: false, error: "Error de configuración en el servidor" });
 
-.login-container button {
-    margin-top: 20px;
-    width: 100%;
-    padding: 10px;
-    background: #8A1538;
-    color: white;
-    border: none;
-    border-radius: 5px;
-    font-weight: bold;
-    cursor: pointer;
-}
+  try {
+    const directorio = await leerHoja(auth, spreadsheetId, "Directorio!A:E");
 
-/* ======== TABLAS Y FILTROS EN UNA FILA ======== */
-.table-container {
-    background: white;
-    padding: 20px;
-    border-radius: 10px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    margin-bottom: 60px;
-}
+    let institucion = null;
+    let esAdmin = false;
 
-.filters {
-    margin-bottom: 15px;
-    display: flex;
-    gap: 15px;
-    align-items: flex-end;
-    flex-wrap: wrap;
-}
+    // Validación de usuario y NIP
+    for (let i = 1; i < directorio.length; i++) {
+      const fila = directorio[i];
+      if (fila.length < 5) continue;
 
-.filters label {
-    display: block;
-    font-size: 13px;
-    font-weight: bold;
-    margin-bottom: 5px;
-}
+      if (usuario === fila[3] && nip === fila[4]) {
+        institucion = fila[0];
+        esAdmin = (institucion === "Administrador");
+        break;
+      }
+    }
 
-.filters input, .filters select {
-    padding: 8px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    font-size: 13px;
-}
+    if (!institucion) {
+      registrarFallo(ip);
+      return res.status(200).json({ ok: false, error: "Usuario o NIP incorrectos" });
+    }
 
-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 15px;
-}
+    const reportes = await leerHoja(auth, spreadsheetId, "Reportes de entrega!A:M");
+    const headers = reportes[0] || [];
+    const filas = reportes.slice(1);
 
-th {
-    background: #8A1538;
-    color: white;
-    padding: 10px;
-    font-size: 13px;
-    text-align: left;
-    cursor: pointer;
-}
+    if (esAdmin) {
+      return res.status(200).json({ ok: true, admin: true, headers, reportes: filas });
+    }
 
-td {
-    border: 1px solid #ddd;
-    padding: 8px;
-    font-size: 13px;
-}
+    const datosUsuario = filas.filter(f => f[5] === institucion);
+    return res.status(200).json({
+      ok: true,
+      admin: false,
+      institucion,
+      headers,
+      reportes: datosUsuario
+    });
 
-.tr-entregado {
-    background-color: #e6f4ea !important; /* Verde para entregados */
-}
-
-/* ======== PAGINACIÓN ======== */
-#paginacion, #paginacionA {
-    text-align: center;
-    margin-top: 20px;
-}
-
-.pag-btn {
-    padding: 8px 14px;
-    margin: 3px;
-    border: 1px solid #8A1538;
-    background: white;
-    color: #8A1538;
-    cursor: pointer;
-    border-radius: 4px;
-}
-
-.pag-btn:hover {
-    background: #8A1538;
-    color: white;
-}
-
-/* ======== PIE DE PÁGINA (FIRMA ORIGINAL) ======== */
-.footer-firma {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    text-align: center;
-    font-size: 12px;
-    color: rgba(108, 117, 125, 0.8);
-    padding: 8px 0;
-    background: rgba(255, 255, 255, 0.4);
-    backdrop-filter: blur(4px);
-    z-index: 9999;
-}
+  } catch (e) {
+    console.error("Error en el proceso de login:", e);
+    return res.status(500).json({ ok: false, error: "Error de conexión con la base de datos" });
+  }
+};
