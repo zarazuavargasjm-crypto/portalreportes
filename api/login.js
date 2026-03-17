@@ -1,7 +1,7 @@
 const { google } = require("googleapis");
 
 // =========================
-// SEGURIDAD (Sin cambios en tu lógica)
+// SEGURIDAD
 // =========================
 const intentosFallidos = {};
 const bloqueosTemporales = {};
@@ -15,25 +15,26 @@ function getIP(req) {
   return forwarded ? forwarded.split(',')[0].trim() : req.socket.remoteAddress || "desconocida";
 }
 
-// FUNCIÓN AJUSTADA: Formato de fecha y celdas individuales
+// FUNCIÓN DE REGISTRO: Formato exacto DD/MM/YYYY HH:MM:SS
 async function registrarEnSheets(auth, spreadsheetId, usuario, ip, tipo, institucion) {
   try {
     const sheets = google.sheets({ version: "v4", auth });
     
-    // Formato de fecha: DD/MM/YYYY HH:MM:SS
+    // Obtener fecha actual y ajustar a zona horaria México (UTC-6)
     const ahora = new Date();
     const fechaMX = new Date(ahora.getTime() - (6 * 60 * 60 * 1000));
-    const d = fechaMX.getDate().toString().padStart(2, '0');
-    const m = (fechaMX.getMonth() + 1).toString().padStart(2, '0');
-    const a = fechaMX.getFullYear();
-    const h = fechaMX.getHours().toString().padStart(2, '0');
+    
+    const dia = fechaMX.getDate().toString().padStart(2, '0');
+    const mes = (fechaMX.getMonth() + 1).toString().padStart(2, '0');
+    const anio = fechaMX.getFullYear();
+    const hora = fechaMX.getHours().toString().padStart(2, '0');
     const min = fechaMX.getMinutes().toString().padStart(2, '0');
-    const s = fechaMX.getSeconds().toString().padStart(2, '0');
+    const seg = fechaMX.getSeconds().toString().padStart(2, '0');
     
-    const fechaFormato = `${d}/${m}/${a} ${h}:${min}:${s}`;
+    // Formato solicitado: DD/MM/YYYY HH:MM:SS
+    const fechaFormatoFinal = `${dia}/${mes}/${anio} ${hora}:${min}:${seg}`;
     
-    // Cada elemento en el array interno es una celda (Columna A, B, C, D, E)
-    const values = [[fechaFormato, usuario, ip, tipo, institucion]];
+    const values = [[fechaFormatoFinal, usuario, ip, tipo, institucion]];
     
     await sheets.spreadsheets.values.append({
       spreadsheetId,
@@ -125,12 +126,10 @@ module.exports = async (req, res) => {
 
     if (!institucion) {
       registrarFallo(ip);
-      // Registro de incidente por credenciales
       await registrarEnSheets(auth, spreadsheetId, usuario, ip, "Credenciales incorrectas", "-");
       return res.status(200).json({ ok: false, error: "Usuario o NIP incorrectos" });
     }
 
-    // Registro de éxito con el tipo (Administrador o Usuario) y mensaje solicitado
     const tipoRegistro = esAdmin ? "Administrador, Inicio de sesión exitoso" : "Usuario, Inicio de sesión exitoso";
     await registrarEnSheets(auth, spreadsheetId, usuario, ip, tipoRegistro, institucion);
 
