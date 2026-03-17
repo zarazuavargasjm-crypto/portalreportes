@@ -6,29 +6,39 @@
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
+
 <div class="header-uaeh">
     <h1>Universidad Autónoma del Estado de Hidalgo</h1>
     <h2>Dirección de Administración Escolar</h2>
     <h3>Área de Trámites y Certificados</h3>
 </div>
+
 <div class="login-container">
     <h2>Acceso al Portal</h2>
-    <p id="error" style="color:red; text-align:center;"></p>
+    <p id="error" style="color:red; text-align:center; display:none;"></p>
+
     <form id="loginForm">
         <label>Usuario</label>
         <input name="usuario" id="usuario" placeholder="Tu usuario" required>
+
         <label>NIP</label>
         <input name="nip" id="nip" type="password" placeholder="Tu NIP" required>
+
         <button type="submit">Entrar</button>
     </form>
 </div>
+
 <div class="footer-firma">Manuel Zarazúa — abril 2026</div>
 
 <script>
 document.getElementById("loginForm").addEventListener("submit", async (e) => {
     e.preventDefault();
+
     const usuario = document.getElementById("usuario").value;
     const nip = document.getElementById("nip").value;
+    const error = document.getElementById("error");
+
+    error.style.display = "none";
 
     const res = await fetch("/api/login", {
         method: "POST",
@@ -39,18 +49,17 @@ document.getElementById("loginForm").addEventListener("submit", async (e) => {
     const data = await res.json();
 
     if (!data.ok) {
-        document.getElementById("error").textContent = data.error || "Error de acceso";
+        error.textContent = data.error;
+        error.style.display = "block";
         return;
     }
 
     localStorage.setItem("reportes", JSON.stringify(data));
 
-    if (data.admin) {
-        window.location.href = "/admin.html";
-    } else {
-        window.location.href = "/tabla.html";
-    }
+    if (data.admin) window.location.href = "/admin.html";
+    else window.location.href = "/tabla.html";
 });
 </script>
+
 </body>
 </html>
