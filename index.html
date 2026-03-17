@@ -2,8 +2,9 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <title>Portal de certificados - Inicio de sesión</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="/static/style.css?v=4">
+    <link rel="stylesheet" href="/static/style.css?v=5">
 </head>
 <body>
 
@@ -11,31 +12,32 @@
     <h1>Universidad Autónoma del Estado de Hidalgo</h1>
     <h2>Dirección de Administración Escolar</h2>
     <h3>Área de Trámites y Certificados</h3>
+    <h4>Portal de consulta de trámites</h4>
 </div>
 
-<div class="login-box">
+<div class="login-container">
     <h2>Acceso al Portal</h2>
-    <p id="error" class="error-msg" style="display:none;"></p>
+    <p id="error" style="color:red; text-align:center; display:none;"></p>
 
     <form id="loginForm">
         <label>Usuario</label>
-        <input name="usuario" id="usuario" required>
+        <input name="usuario" id="usuario" placeholder="Tu usuario" required>
 
         <label>NIP</label>
-        <input name="nip" id="nip" type="password" required>
+        <input name="nip" id="nip" type="password" placeholder="Tu NIP" required>
 
-        <button type="submit" class="btn-institucional">Entrar</button>
+        <button type="submit">Entrar</button>
     </form>
 </div>
 
-<div class="footer-firma">Manuel Zarazúa — abril 2026</div>
+<div class="footer-firma">Manuel Zarazúa — abril 2026 · Portal de certificados</div>
 
 <script>
 document.getElementById("loginForm").addEventListener("submit", async (e) => {
     e.preventDefault();
 
-    const usuario = usuario.value;
-    const nip = nip.value;
+    const usuario = document.getElementById("usuario").value;
+    const nip = document.getElementById("nip").value;
     const error = document.getElementById("error");
 
     error.style.display = "none";
