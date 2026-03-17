@@ -3,86 +3,95 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mis Reportes</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
 
+<div class="top-right"><a href="/" class="btn-logout">Cerrar sesión</a></div>
+
 <div class="header-uaeh">
-    <h2 id="titulo"></h2>
-    <button id="logout">Cerrar sesión</button>
+    <h1>Universidad Autónoma del Estado de Hidalgo</h1>
+    <h2>Dirección de Administración Escolar</h2>
+    <h3>Área de Trámites y Certificados</h3>
 </div>
 
-<input id="busqueda" placeholder="Buscar por texto...">
-<input id="filtroCuenta" placeholder="Número de cuenta">
-<input id="filtroFolio" placeholder="Folio">
+<div class="table-container">
+    <h2>Institución: <span id="inst"></span></h2>
 
-<table id="tabla">
-    <thead id="thead"></thead>
-    <tbody id="tbody"></tbody>
-</table>
+    <div class="filters">
+        <div><label>Cuenta:</label><input type="text" id="fc" placeholder="Buscar cuenta"></div>
+        <div><label>Folio:</label><input type="text" id="ff" placeholder="Buscar folio"></div>
+        <div>
+            <label>Estatus:</label>
+            <select id="fe">
+                <option value="">Todos</option>
+                <option value="Entregado">Entregado</option>
+                <option value="Pendiente">Pendiente</option>
+            </select>
+        </div>
+    </div>
 
-<div id="paginacion"></div>
+    <div style="overflow-x: auto;">
+        <table id="t">
+            <thead><tr id="thead"></tr></thead>
+            <tbody id="tbody"></tbody>
+        </table>
+    </div>
 
-<footer>Manuel Zarazua – Abril 2026</footer>
+    <div id="paginacion"></div>
+</div>
+
+<div class="footer-firma">Manuel Zarazúa — abril 2026</div>
 
 <script>
 const data = JSON.parse(localStorage.getItem("reportes"));
 if (!data || !data.reportes) window.location.href = "/";
 
+document.getElementById("inst").textContent = data.institucion;
+
 const headers = data.headers;
 const filas = data.reportes;
-const institucion = data.institucion;
 
-document.getElementById("titulo").textContent =
-    "Reportes de " + institucion;
-
-document.getElementById("logout").onclick = () => {
-    localStorage.clear();
-    window.location.href = "/";
-};
-
-// Encabezados con ordenamiento
+// Render encabezados
 let th = "";
-headers.forEach((h, i) => {
-    th += `<th onclick="ordenar(${i})">${h}</th>`;
-});
-document.getElementById("thead").innerHTML = `<tr>${th}</tr>`;
+headers.forEach((h, i) => th += `<th onclick="ordenar(${i})">${h}</th>`);
+document.getElementById("thead").innerHTML = th;
 
-// Paginación
+// Render filas con paginación
 let pagina = 1;
-const porPagina = 25;
+const porPagina = 30;
 
-// Render tabla
 function renderTabla() {
-    const texto = document.getElementById("busqueda").value.toLowerCase();
-    const cuenta = document.getElementById("filtroCuenta").value;
-    const folio = document.getElementById("filtroFolio").value;
+    const cVal = document.getElementById("fc").value.toLowerCase();
+    const fVal = document.getElementById("ff").value.toLowerCase();
+    const eVal = document.getElementById("fe").value;
 
     let filtrados = filas.filter(f => {
-        const row = f.join(" ").toLowerCase();
-        if (!row.includes(texto)) return false;
-        if (cuenta && f[1] !== cuenta) return false;
-        if (folio && f[0] !== folio) return false;
-        return true;
+        const est = f[12] || "";
+        return (
+            f[1].toLowerCase().includes(cVal) &&
+            f[9].toLowerCase().includes(fVal) &&
+            (eVal === "" || est === eVal)
+        );
     });
 
     const inicio = (pagina - 1) * porPagina;
-    const paginados = filtrados.slice(inicio, inicio + porPagina);
+    const pag = filtrados.slice(inicio, inicio + porPagina);
 
     let rows = "";
-    paginados.forEach(f => {
-        let tds = "";
-        f.forEach(c => tds += `<td>${c}</td>`);
-        rows += `<tr>${tds}</tr>`;
+    pag.forEach(f => {
+        const est = f[12] || "";
+        rows += `<tr class="r ${est === 'Entregado' ? 'tr-entregado' : ''}">
+            ${f.map(c => `<td>${c}</td>`).join("")}
+        </tr>`;
     });
 
     document.getElementById("tbody").innerHTML = rows;
 
     // Paginación
     let pagBtns = "";
-    const totalPag = Math.ceil(filtrados.length / porPagina);
-    for (let i = 1; i <= totalPag; i++) {
+    const total = Math.ceil(filtrados.length / porPagina);
+    for (let i = 1; i <= total; i++) {
         pagBtns += `<button class="pag-btn" onclick="pagina=${i};renderTabla()">${i}</button>`;
     }
     document.getElementById("paginacion").innerHTML = pagBtns;
@@ -90,16 +99,17 @@ function renderTabla() {
 
 renderTabla();
 
-document.getElementById("busqueda").oninput = renderTabla;
-document.getElementById("filtroCuenta").oninput = renderTabla;
-document.getElementById("filtroFolio").oninput = renderTabla;
+document.getElementById("fc").oninput = renderTabla;
+document.getElementById("ff").oninput = renderTabla;
+document.getElementById("fe").onchange = renderTabla;
 
-// Ordenamiento
+// Ordenamiento original
 let asc = true;
-function ordenar(col) {
-    filas.sort((a, b) => asc
-        ? (a[col] > b[col] ? 1 : -1)
-        : (a[col] < b[col] ? 1 : -1)
+function ordenar(n) {
+    filas.sort((a, b) =>
+        asc
+            ? (a[n] > b[n] ? 1 : -1)
+            : (a[n] < b[n] ? 1 : -1)
     );
     asc = !asc;
     renderTabla();
