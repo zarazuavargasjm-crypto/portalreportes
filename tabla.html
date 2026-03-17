@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="/static/style.css?v=3">
+    <link rel="stylesheet" href="/static/style.css?v=4">
 </head>
 <body>
 
@@ -19,8 +19,8 @@
     <h2>Institución: <span id="inst"></span></h2>
 
     <div class="filters">
-        <div><label>Cuenta:</label><input type="text" id="fc" placeholder="Buscar cuenta"></div>
-        <div><label>Folio:</label><input type="text" id="ff" placeholder="Buscar folio"></div>
+        <div><label>Cuenta:</label><input type="text" id="fc"></div>
+        <div><label>Folio:</label><input type="text" id="ff"></div>
         <div>
             <label>Estatus:</label>
             <select id="fe">
@@ -31,7 +31,7 @@
         </div>
     </div>
 
-    <div style="overflow-x:auto;">
+    <div class="table-wrapper">
         <table id="t">
             <thead><tr id="thead"></tr></thead>
             <tbody id="tbody"></tbody>
@@ -52,15 +52,12 @@ document.getElementById("inst").textContent = data.institucion;
 const headers = data.headers;
 const filas = data.reportes;
 
-// Encabezados
 document.getElementById("thead").innerHTML =
     headers.map((h, i) => `<th onclick="ordenar(${i})">${h}</th>`).join("");
 
-// Paginación
 let pagina = 1;
 const porPagina = 30;
 
-// Ocultar entregados > 1 mes
 function esAntiguo(fechaStr) {
     if (!fechaStr) return false;
     const fecha = new Date(fechaStr);
@@ -96,7 +93,6 @@ function renderTabla() {
         </tr>`;
     }).join("");
 
-    // Paginación
     let botones = "";
     const total = Math.ceil(filtrados.length / porPagina);
     for (let i = 1; i <= total; i++) {
@@ -109,7 +105,6 @@ fc.oninput = renderTabla;
 ff.oninput = renderTabla;
 fe.onchange = renderTabla;
 
-// Ordenamiento
 let asc = true;
 function ordenar(n) {
     filas.sort((a, b) => {
