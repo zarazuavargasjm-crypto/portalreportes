@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <title>Portal de certificados - Inicio de sesión</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="/static/style.css?v=5">
+    <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
 
@@ -16,7 +16,7 @@
 </div>
 
 <div class="login-container">
-    <h2>Acceso al Portal</h2>
+    <h2 style="text-align: center;">Acceso al Portal</h2>
     <p id="error" style="color:red; text-align:center; display:none;"></p>
 
     <form id="loginForm">
@@ -35,11 +35,9 @@
 <script>
 document.getElementById("loginForm").addEventListener("submit", async (e) => {
     e.preventDefault();
-
     const usuario = document.getElementById("usuario").value;
     const nip = document.getElementById("nip").value;
     const error = document.getElementById("error");
-
     error.style.display = "none";
 
     const res = await fetch("/api/login", {
@@ -49,19 +47,15 @@ document.getElementById("loginForm").addEventListener("submit", async (e) => {
     });
 
     const data = await res.json();
-
     if (!data.ok) {
         error.textContent = data.error;
         error.style.display = "block";
         return;
     }
-
     localStorage.setItem("reportes", JSON.stringify(data));
-
     if (data.admin) window.location.href = "/admin.html";
     else window.location.href = "/tabla.html";
 });
 </script>
-
 </body>
 </html>
