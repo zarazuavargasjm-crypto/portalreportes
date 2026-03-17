@@ -60,39 +60,36 @@ document.getElementById("thead").innerHTML =
 let pagina = 1;
 const porPagina = 30;
 
-// FUNCIÓN MAESTRA: Detecta formato 20/1/2026 O martes, 20 de enero de 2026
-function obtenerFechaObjeto(texto) {
+// PROCESADOR DE FECHAS ULTRA FLEXIBLE
+function parsearCualquierFecha(texto) {
     if (!texto) return null;
-    const t = texto.toLowerCase().trim();
-
-    // Caso 1: Formato numérico 20/1/2026
-    if (t.includes('/') && !t.includes(' de ')) {
-        const p = t.split('/');
-        if (p.length === 3) {
-            return new Date(parseInt(p[2]), parseInt(p[1]) - 1, parseInt(p[0]));
-        }
-    }
-
-    // Caso 2: Formato texto "martes, 20 de enero de 2026"
+    // Limpiamos espacios raros y pasamos a minúsculas
+    let t = texto.toLowerCase().trim().replace(/,/g, '');
+    
     const meses = {
         "enero": 0, "febrero": 1, "marzo": 2, "abril": 3, "mayo": 4, "junio": 5,
         "julio": 6, "agosto": 7, "septiembre": 8, "octubre": 9, "noviembre": 10, "diciembre": 11
     };
 
-    try {
-        // Quitamos el día de la semana (si existe) y la palabra "de"
-        const limpia = t.split(',').pop().replace(/de/g, '').trim();
-        const partes = limpia.split(/\s+/); 
-        
-        if (partes.length >= 3) {
-            const dia = parseInt(partes[0]);
-            const mes = meses[partes[1].trim()];
-            const anio = parseInt(partes[2]);
-            if (mes !== undefined) return new Date(anio, mes, dia);
-        }
-    } catch (e) {
-        return null;
+    // Intento 1: Formato 20/1/2026
+    if (t.includes('/')) {
+        const p = t.split('/');
+        if (p.length === 3) return new Date(p[2], p[1] - 1, p[0]);
     }
+
+    // Intento 2: Formato "martes 20 de enero de 2026"
+    if (t.includes(' de ')) {
+        const partes = t.replace(/de/g, '').split(/\s+/);
+        // Buscamos cuál de las partes es un número (el día) y cuál es el mes
+        let dia, mes, anio;
+        partes.forEach(p => {
+            if (meses[p] !== undefined) mes = meses[p];
+            else if (!isNaN(p) && p.length <= 2) dia = parseInt(p);
+            else if (!isNaN(p) && p.length === 4) anio = parseInt(p);
+        });
+        if (dia && mes !== undefined && anio) return new Date(anio, mes, dia);
+    }
+
     return null;
 }
 
@@ -100,17 +97,26 @@ function verificarVisibilidad(fila) {
     const estatus = (fila[12] || "").trim(); // Columna M
     const fechaTexto = (fila[11] || "").trim(); // Columna L
 
-    // Si es Pendiente siempre se muestra
     if (estatus !== "Entregado") return true;
-    
-    const fechaEntrega = obtenerFechaObjeto(fechaTexto);
-    if (!fechaEntrega) return true; // Si no hay fecha o falla el parse, lo mostramos para no perder datos
+    if (!fechaTexto) return true; // Si no hay fecha, lo mostramos para no ocultar info por error
+
+    const fechaEntrega = parsearCualquierFecha(fechaTexto);
+    if (!fechaEntrega) {
+        console.warn("No se pudo entender esta fecha:", fechaTexto);
+        return true; 
+    }
 
     const hoy = new Date();
+    // Ponemos hoy a las 00:00:00 para comparar solo días
+    hoy.setHours(0, 0, 0, 0);
+    fechaEntrega.setHours(0, 0, 0, 0);
+
     const diferenciaMs = hoy - fechaEntrega;
     const treintaDiasMs = 30 * 24 * 60 * 60 * 1000;
 
-    // Solo se muestra si han pasado MENOS de 30 días
+    // DEBUG: Descomenta la siguiente línea para ver el cálculo en la consola (F12)
+    // console.log(`Fecha: ${fechaTexto} | Días: ${diferenciaMs / (treintaDiasMs/30)}`);
+
     return diferenciaMs <= treintaDiasMs;
 }
 
