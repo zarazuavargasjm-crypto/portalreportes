@@ -15,28 +15,34 @@ function getIP(req) {
   return forwarded ? forwarded.split(',')[0].trim() : req.socket.remoteAddress || "desconocida";
 }
 
-// FUNCIÓN CORREGIDA: Registro de IPs en Google Sheets
+// FUNCIÓN AJUSTADA: Formato de registro solicitado
 async function registrarEnSheets(auth, spreadsheetId, usuario, ip, tipo, institucion) {
   try {
     const sheets = google.sheets({ version: "v4", auth });
     
-    // Hora de México (UTC-6)
+    // Fecha y Hora en formato DD/MM/YYYY HH:MM:SS
     const ahora = new Date();
     const fechaMX = new Date(ahora.getTime() - (6 * 60 * 60 * 1000));
-    const fechaFormateada = fechaMX.toISOString().replace('T', ' ').split('.')[0];
+    const d = fechaMX.getDate().toString().padStart(2, '0');
+    const m = (fechaMX.getMonth() + 1).toString().padStart(2, '0');
+    const a = fechaMX.getFullYear();
+    const h = fechaMX.getHours().toString().padStart(2, '0');
+    const min = fechaMX.getMinutes().toString().padStart(2, '0');
+    const s = fechaMX.getSeconds().toString().padStart(2, '0');
     
-    const values = [[fechaFormateada, usuario, ip, tipo, institucion]];
+    const fechaFormato = `${d}/${m}/${a} ${h}:${min}:${s}`;
     
-    // Usamos await para asegurar que se registre antes de que termine la función
+    // Se graban los datos como columnas individuales para que sigan tu formato exacto
+    const values = [[fechaFormato, usuario, ip, tipo, institucion]];
+    
     await sheets.spreadsheets.values.append({
       spreadsheetId,
       range: "Registro de consultas!A1",
       valueInputOption: "RAW",
       requestBody: { values }
     });
-    console.log(`[OK] Registro escrito en Sheets para: ${usuario}`);
   } catch (e) {
-    console.error("[ERROR] No se pudo escribir en Sheets:", e.message);
+    console.error("[ERROR] Registro:", e.message);
   }
 }
 
@@ -70,16 +76,8 @@ function getClient() {
   try {
     const cred = JSON.parse(credJson);
     const privateKey = cred.private_key.replace(/\\n/g, '\n');
-    
-    // PERMISO CORREGIDO: Se quita ".readonly" para poder escribir
     const scopes = ["https://www.googleapis.com/auth/spreadsheets"];
-    
-    return new google.auth.JWT(
-      cred.client_email, 
-      null, 
-      privateKey, 
-      scopes
-    );
+    return new google.auth.JWT(cred.client_email, null, privateKey, scopes);
   } catch (e) {
     return null;
   }
@@ -127,13 +125,12 @@ module.exports = async (req, res) => {
 
     if (!institucion) {
       registrarFallo(ip);
-      // REGISTRO DE FALLO EN SHEETS (con await)
-      await registrarEnSheets(auth, spreadsheetId, usuario, ip, "Fallo: Credenciales incorrectas", "-");
+      await registrarEnSheets(auth, spreadsheetId, usuario, ip, "Credenciales incorrectas", "-");
       return res.status(200).json({ ok: false, error: "Usuario o NIP incorrectos" });
     }
 
-    // REGISTRO DE ÉXITO EN SHEETS (con await)
-    await registrarEnSheets(auth, spreadsheetId, usuario, ip, esAdmin ? "Acceso Admin" : "Acceso Usuario", institucion);
+    // Registro con el formato solicitado
+    await registrarEnSheets(auth, spreadsheetId, usuario, ip, "Inicio de sesión exitoso", institucion);
 
     const reportes = await leerHoja(auth, spreadsheetId, "Reportes de entrega!A:M");
     const headers = reportes[0] || [];
