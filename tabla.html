@@ -6,18 +6,14 @@
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-
 <div class="top-right"><a href="/" class="btn-logout">Cerrar sesión</a></div>
-
 <div class="header-uaeh">
     <h1>Universidad Autónoma del Estado de Hidalgo</h1>
     <h2>Dirección de Administración Escolar</h2>
     <h3>Área de Trámites y Certificados</h3>
 </div>
-
 <div class="table-container">
-    <h2>Institución: <span id="inst"></span></h2>
-
+    <h2>Institución: <span id="institucion"></span></h2>
     <div class="filters">
         <div><label>Cuenta:</label><input type="text" id="fc" placeholder="Buscar cuenta"></div>
         <div><label>Folio:</label><input type="text" id="ff" placeholder="Buscar folio"></div>
@@ -30,37 +26,33 @@
             </select>
         </div>
     </div>
-
     <div style="overflow-x: auto;">
         <table id="t">
-            <thead><tr id="thead"></tr></thead>
+            <thead>
+                <tr id="thead"></tr>
+            </thead>
             <tbody id="tbody"></tbody>
         </table>
     </div>
-
-    <div id="paginacion"></div>
 </div>
-
 <div class="footer-firma">Manuel Zarazúa — abril 2026</div>
-
 <script>
-const data = JSON.parse(localStorage.getItem("reportes"));
-if (!data || !data.reportes) window.location.href = "/";
+const dataT = JSON.parse(localStorage.getItem("reportes"));
+if (!dataT || dataT.admin || !dataT.reportes) window.location.href = "/";
 
-document.getElementById("inst").textContent = data.institucion;
+document.getElementById("institucion").textContent = dataT.institucion || "";
 
-const headers = data.headers;
-const filas = data.reportes;
+const headersT = dataT.headers || [];
+const filasT = dataT.reportes || [];
 
-// Encabezados
 document.getElementById("thead").innerHTML =
-    headers.map((h, i) => `<th onclick="ordenar(${i})">${h}</th>`).join("");
+    headersT.map((h, idx) => `<th onclick="ordenar(${idx})">${h}</th>`).join("");
 
-// Paginación
-let pagina = 1;
-const porPagina = 30;
+const tbody = document.getElementById("tbody");
+const fc = document.getElementById("fc");
+const ff = document.getElementById("ff");
+const fe = document.getElementById("fe");
 
-// Función para saber si un entregado tiene más de 1 mes
 function esAntiguo(fechaStr) {
     if (!fechaStr) return false;
     const fecha = new Date(fechaStr);
@@ -75,57 +67,45 @@ function renderTabla() {
     const fVal = ff.value.toLowerCase();
     const eVal = fe.value;
 
-    let filtrados = filas.filter(f => {
-        const est = f[12] || "";
-        const fechaEntrega = f[11] || "";
+    const filtrados = filasT.filter(row => {
+        const est = (row[12] || "").trim();
+        const fechaEntrega = row[11] || "";
 
-        // Ocultar entregados > 1 mes SOLO usuarios
         if (est === "Entregado" && esAntiguo(fechaEntrega)) return false;
 
         return (
-            f[1].toLowerCase().includes(cVal) &&
-            f[9].toLowerCase().includes(fVal) &&
+            (row[1] || "").toLowerCase().includes(cVal) &&
+            (row[9] || "").toLowerCase().includes(fVal) &&
             (eVal === "" || est === eVal)
         );
     });
 
-    const inicio = (pagina - 1) * porPagina;
-    const pag = filtrados.slice(inicio, inicio + porPagina);
-
-    tbody.innerHTML = pag.map(f => {
-        const est = f[12] || "";
+    tbody.innerHTML = filtrados.map(fila => {
+        const est = fila[12] || "";
         return `<tr class="r ${est === 'Entregado' ? 'tr-entregado' : ''}">
-            ${f.map(c => `<td>${c}</td>`).join("")}
+            ${fila.map(c => `<td>${c}</td>`).join("")}
         </tr>`;
     }).join("");
+}
 
-    // Paginación
-    let pagBtns = "";
-    const total = Math.ceil(filtrados.length / porPagina);
-    for (let i = 1; i <= total; i++) {
-        pagBtns += `<button class="pag-btn" onclick="pagina=${i};renderTabla()">${i}</button>`;
-    }
-    paginacion.innerHTML = pagBtns;
+fc.addEventListener("input", renderTabla);
+ff.addEventListener("input", renderTabla);
+fe.addEventListener("change", renderTabla);
+
+let dirAsc = true;
+function ordenar(n) {
+    filasT.sort((a, b) => {
+        const va = (a[n] || "").toString().toLowerCase();
+        const vb = (b[n] || "").toString().toLowerCase();
+        if (va > vb) return dirAsc ? 1 : -1;
+        if (va < vb) return dirAsc ? -1 : 1;
+        return 0;
+    });
+    dirAsc = !dirAsc;
+    renderTabla();
 }
 
 renderTabla();
-
-fc.oninput = renderTabla;
-ff.oninput = renderTabla;
-fe.onchange = renderTabla;
-
-// Ordenamiento original
-let asc = true;
-function ordenar(n) {
-    filas.sort((a, b) =>
-        asc
-            ? (a[n] > b[n] ? 1 : -1)
-            : (a[n] < b[n] ? 1 : -1)
-    );
-    asc = !asc;
-    renderTabla();
-}
 </script>
-
 </body>
 </html>
