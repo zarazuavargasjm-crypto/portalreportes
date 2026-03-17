@@ -50,6 +50,7 @@ const data = JSON.parse(localStorage.getItem("reportes"));
 if (!data || data.admin) window.location.href = "/";
 
 document.getElementById("inst").textContent = data.institucion;
+
 const headers = data.headers;
 const filas = data.reportes;
 
@@ -59,11 +60,24 @@ document.getElementById("thead").innerHTML =
 let pagina = 1;
 const porPagina = 30;
 
-function esAntiguo(fechaStr) {
-    if (!fechaStr) return false;
-    const fecha = new Date(fechaStr);
-    if (isNaN(fecha)) return false;
-    return (Date.now() - fecha.getTime()) > 30 * 24 * 60 * 60 * 1000;
+// FUNCIÓN DE FILTRO POR ANTIGÜEDAD (SOLO PARA USUARIOS)
+function esVisibleParaUsuario(estatus, fechaTexto) {
+    if (estatus !== "Entregado") return true; // Los pendientes siempre se ven
+    if (!fechaTexto) return false;
+
+    // Calculamos la fecha limite (hoy menos 30 días)
+    const hoy = new Date();
+    const limite = new Date();
+    limite.setDate(hoy.getDate() - 30);
+
+    // Formato esperado en Excel: DD/MM/YYYY
+    const partes = fechaTexto.split('/');
+    if (partes.length === 3) {
+        const fechaEntrega = new Date(partes[2], partes[1] - 1, partes[0]);
+        // Si la entrega es posterior al límite (menos de un mes), es visible
+        return fechaEntrega >= limite;
+    }
+    return false;
 }
 
 function renderTabla() {
@@ -72,9 +86,13 @@ function renderTabla() {
     const eVal = fe.value;
 
     const filtrados = filas.filter(f => {
-        const est = f[12] || "";
-        const fecha = f[11] || "";
-        if (est === "Entregado" && esAntiguo(fecha)) return false;
+        const est = (f[12] || "").trim(); // Columna M: Estatus
+        const fecha = f[11] || "";        // Columna L: Fecha de Entrega
+
+        // APLICAR RESTRICCIÓN DE UN MES
+        if (!esVisibleParaUsuario(est, fecha)) return false;
+
+        // FILTROS DE BÚSQUEDA NORMALES
         return (
             f[1].toLowerCase().includes(cVal) &&
             f[9].toLowerCase().includes(fVal) &&
@@ -116,7 +134,9 @@ function ordenar(n) {
     asc = !asc;
     renderTabla();
 }
+
 renderTabla();
 </script>
+
 </body>
 </html>
