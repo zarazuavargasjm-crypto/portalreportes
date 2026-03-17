@@ -15,7 +15,7 @@ function getIP(req) {
   return forwarded ? forwarded.split(',')[0].trim() : req.socket.remoteAddress || "desconocida";
 }
 
-// FUNCIÓN DE REGISTRO: Formato DD/MM/YYYY HH:MM:SS y fila nueva
+// FUNCIÓN DE REGISTRO: Formato DD/MM/YYYY HH:MM:SS en FILA NUEVA
 async function registrarEnSheets(auth, spreadsheetId, usuario, ip, tipo, institucion) {
   try {
     const sheets = google.sheets({ version: "v4", auth });
@@ -24,6 +24,7 @@ async function registrarEnSheets(auth, spreadsheetId, usuario, ip, tipo, institu
     const ahora = new Date();
     const fechaMX = new Date(ahora.getTime() - (6 * 60 * 60 * 1000));
     
+    // Formato manual: Día/Mes/Año Hora:Minuto:Segundo
     const dia = String(fechaMX.getDate()).padStart(2, '0');
     const mes = String(fechaMX.getMonth() + 1).padStart(2, '0');
     const anio = fechaMX.getFullYear();
@@ -33,13 +34,14 @@ async function registrarEnSheets(auth, spreadsheetId, usuario, ip, tipo, institu
     
     const fechaFormatoFinal = `${dia}/${mes}/${anio} ${hora}:${min}:${seg}`;
     
-    // Registro en celdas individuales
     const values = [[fechaFormatoFinal, usuario || "No provisto", ip, tipo, institucion || "-"]];
     
+    // .append con range "A1" busca automáticamente la primera fila libre al final de la hoja
     await sheets.spreadsheets.values.append({
       spreadsheetId,
       range: "Registro de consultas!A1",
       valueInputOption: "RAW",
+      insertDataOption: "INSERT_ROWS",
       requestBody: { values }
     });
   } catch (e) {
@@ -114,7 +116,6 @@ module.exports = async (req, res) => {
     let esAdmin = false;
     let usuarioEncontrado = false;
 
-    // Validación detallada
     for (let i = 1; i < directorio.length; i++) {
       const fila = directorio[i];
       if (fila.length < 5) continue;
@@ -129,7 +130,6 @@ module.exports = async (req, res) => {
       }
     }
 
-    // REGISTRO DE FALLOS (Usuario inexistente o NIP mal)
     if (!usuarioEncontrado) {
       registrarFallo(ip);
       await registrarEnSheets(auth, spreadsheetId, usuario, ip, "Credenciales incorrectas (Usuario no existe)", "-");
@@ -142,7 +142,6 @@ module.exports = async (req, res) => {
       return res.status(200).json({ ok: false, error: "Usuario o NIP incorrectos" });
     }
 
-    // REGISTRO DE ÉXITO (Administrador o Usuario)
     const tipoFinal = esAdmin ? "Administrador, Inicio de sesión exitoso" : "Usuario, Inicio de sesión exitoso";
     await registrarEnSheets(auth, spreadsheetId, usuario, ip, tipoFinal, institucion);
 
