@@ -47,7 +47,6 @@
 
 <script>
 const data = JSON.parse(localStorage.getItem("reportes"));
-// Si no hay datos o es admin, redirigir (el admin usa su propia página sin restricciones)
 if (!data || data.admin) window.location.href = "/";
 
 document.getElementById("inst").textContent = data.institucion;
@@ -61,40 +60,46 @@ document.getElementById("thead").innerHTML =
 let pagina = 1;
 const porPagina = 30;
 
-// FUNCIÓN PARA VERIFICAR SI EL REGISTRO ES VISIBLE SEGÚN LA COLUMNA L (Índice 11)
+// FUNCIÓN PARA CONVERTIR "martes, 20 de enero de 2026" A OBJETO FECHA
+function parsearFechaEspañol(texto) {
+    if (!texto) return null;
+    const meses = {
+        "enero": 0, "febrero": 1, "marzo": 2, "abril": 3, "mayo": 4, "junio": 5,
+        "julio": 6, "agosto": 7, "septiembre": 8, "octubre": 9, "noviembre": 10, "diciembre": 11
+    };
+    
+    try {
+        // Limpiamos el texto: quitamos el día de la semana y la palabra "de"
+        // Ejemplo: "martes, 20 de enero de 2026" -> ["20", "enero", "2026"]
+        const limpia = texto.toLowerCase().split(',').pop().replace(/de/g, '').trim();
+        const partes = limpia.split(/\s+/); // Divide por espacios
+        
+        if (partes.length >= 3) {
+            const dia = parseInt(partes[0]);
+            const mes = meses[partes[1]];
+            const anio = parseInt(partes[2]);
+            return new Date(anio, mes, dia);
+        }
+    } catch (e) {
+        return null;
+    }
+    return null;
+}
+
 function verificarVisibilidad(fila) {
     const estatus = (fila[12] || "").trim(); // Columna M
     const fechaTexto = (fila[11] || "").trim(); // Columna L
 
-    // Si es Pendiente, siempre es visible
     if (estatus !== "Entregado") return true;
+    
+    const fechaEntrega = parsearFechaEspañol(fechaTexto);
+    if (!fechaEntrega) return false;
 
-    // Si es Entregado pero no tiene fecha, por seguridad no lo mostramos o cámbialo a true si prefieres
-    if (!fechaTexto) return false;
+    const hoy = new Date();
+    const diferenciaMs = hoy - fechaEntrega;
+    const treintaDiasMs = 30 * 24 * 60 * 60 * 1000;
 
-    try {
-        // Formato esperado: DD/MM/YYYY
-        const partes = fechaTexto.split('/');
-        if (partes.length === 3) {
-            const dia = parseInt(partes[0]);
-            const mes = parseInt(partes[1]) - 1; // Enero es 0
-            const anio = parseInt(partes[2]);
-            
-            const fechaEntrega = new Date(anio, mes, dia);
-            const hoy = new Date();
-            
-            // Calculamos la diferencia en milisegundos
-            const diferenciaMs = hoy - fechaEntrega;
-            // Convertimos 30 días a milisegundos (30 días * 24h * 60m * 60s * 1000ms)
-            const treintaDiasMs = 30 * 24 * 60 * 60 * 1000;
-
-            // Si la diferencia es menor o igual a 30 días, es visible
-            return diferenciaMs <= treintaDiasMs;
-        }
-    } catch (e) {
-        return false;
-    }
-    return false;
+    return diferenciaMs <= treintaDiasMs;
 }
 
 function renderTabla() {
@@ -103,10 +108,7 @@ function renderTabla() {
     const eVal = fe.value;
 
     const filtrados = filas.filter(f => {
-        // 1. Aplicar regla de antigüedad de un mes
         if (!verificarVisibilidad(f)) return false;
-
-        // 2. Aplicar filtros de búsqueda del usuario
         const est = (f[12] || "").trim();
         return (
             f[1].toLowerCase().includes(cVal) &&
@@ -152,6 +154,5 @@ function ordenar(n) {
 
 renderTabla();
 </script>
-
 </body>
 </html>
