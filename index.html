@@ -1,41 +1,32 @@
 <!DOCTYPE html>
-<html lang="es">
+<html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Portal de Reportes</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-
 <div class="header-uaeh">
     <h1>Universidad Autónoma del Estado de Hidalgo</h1>
     <h2>Dirección de Administración Escolar</h2>
     <h3>Área de Trámites y Certificados</h3>
 </div>
-
 <div class="login-container">
     <h2>Acceso al Portal</h2>
-
-    <p id="error" class="error"></p>
-
+    <p id="error" style="color:red; text-align:center;"></p>
     <form id="loginForm">
         <label>Usuario</label>
-        <input name="usuario" id="usuario" required>
-
+        <input name="usuario" id="usuario" placeholder="Tu usuario" required>
         <label>NIP</label>
-        <input name="nip" id="nip" type="password" required>
-
+        <input name="nip" id="nip" type="password" placeholder="Tu NIP" required>
         <button type="submit">Entrar</button>
     </form>
 </div>
-
-<footer>Manuel Zarazua – Abril 2026</footer>
+<div class="footer-firma">Manuel Zarazúa — abril 2026</div>
 
 <script>
 document.getElementById("loginForm").addEventListener("submit", async (e) => {
     e.preventDefault();
-
     const usuario = document.getElementById("usuario").value;
     const nip = document.getElementById("nip").value;
 
@@ -48,7 +39,7 @@ document.getElementById("loginForm").addEventListener("submit", async (e) => {
     const data = await res.json();
 
     if (!data.ok) {
-        document.getElementById("error").textContent = data.error;
+        document.getElementById("error").textContent = data.error || "Error de acceso";
         return;
     }
 
@@ -61,6 +52,5 @@ document.getElementById("loginForm").addEventListener("submit", async (e) => {
     }
 });
 </script>
-
 </body>
 </html>
