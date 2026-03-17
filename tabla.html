@@ -2,8 +2,9 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <title>Portal de certificados - Consulta</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="/static/style.css?v=4">
+    <link rel="stylesheet" href="/static/style.css?v=5">
 </head>
 <body>
 
@@ -13,14 +14,15 @@
     <h1>Universidad Autónoma del Estado de Hidalgo</h1>
     <h2>Dirección de Administración Escolar</h2>
     <h3>Área de Trámites y Certificados</h3>
+    <h4>Portal de consulta de trámites</h4>
 </div>
 
 <div class="table-container">
     <h2>Institución: <span id="inst"></span></h2>
 
     <div class="filters">
-        <div><label>Cuenta:</label><input type="text" id="fc"></div>
-        <div><label>Folio:</label><input type="text" id="ff"></div>
+        <div><label>Cuenta:</label><input type="text" id="fc" placeholder="Buscar cuenta"></div>
+        <div><label>Folio:</label><input type="text" id="ff" placeholder="Buscar folio"></div>
         <div>
             <label>Estatus:</label>
             <select id="fe">
@@ -31,7 +33,7 @@
         </div>
     </div>
 
-    <div class="table-wrapper">
+    <div style="overflow-x:auto;">
         <table id="t">
             <thead><tr id="thead"></tr></thead>
             <tbody id="tbody"></tbody>
@@ -41,7 +43,7 @@
     <div id="paginacion"></div>
 </div>
 
-<div class="footer-firma">Manuel Zarazúa — abril 2026</div>
+<div class="footer-firma">Manuel Zarazúa — abril 2026 · Portal de certificados</div>
 
 <script>
 const data = JSON.parse(localStorage.getItem("reportes"));
