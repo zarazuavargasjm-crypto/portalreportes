@@ -15,26 +15,26 @@ function getIP(req) {
   return forwarded ? forwarded.split(',')[0].trim() : req.socket.remoteAddress || "desconocida";
 }
 
-// FUNCIÓN DE REGISTRO: Formato exacto DD/MM/YYYY HH:MM:SS
+// FUNCIÓN DE REGISTRO: Formato DD/MM/YYYY HH:MM:SS y fila nueva
 async function registrarEnSheets(auth, spreadsheetId, usuario, ip, tipo, institucion) {
   try {
     const sheets = google.sheets({ version: "v4", auth });
     
-    // Obtener fecha actual y ajustar a zona horaria México (UTC-6)
+    // Ajuste a zona horaria México (UTC-6)
     const ahora = new Date();
     const fechaMX = new Date(ahora.getTime() - (6 * 60 * 60 * 1000));
     
-    const dia = fechaMX.getDate().toString().padStart(2, '0');
-    const mes = (fechaMX.getMonth() + 1).toString().padStart(2, '0');
+    const dia = String(fechaMX.getDate()).padStart(2, '0');
+    const mes = String(fechaMX.getMonth() + 1).padStart(2, '0');
     const anio = fechaMX.getFullYear();
-    const hora = fechaMX.getHours().toString().padStart(2, '0');
-    const min = fechaMX.getMinutes().toString().padStart(2, '0');
-    const seg = fechaMX.getSeconds().toString().padStart(2, '0');
+    const hora = String(fechaMX.getHours()).padStart(2, '0');
+    const min = String(fechaMX.getMinutes()).padStart(2, '0');
+    const seg = String(fechaMX.getSeconds()).padStart(2, '0');
     
-    // Formato solicitado: DD/MM/YYYY HH:MM:SS
     const fechaFormatoFinal = `${dia}/${mes}/${anio} ${hora}:${min}:${seg}`;
     
-    const values = [[fechaFormatoFinal, usuario, ip, tipo, institucion]];
+    // Registro en celdas individuales
+    const values = [[fechaFormatoFinal, usuario || "No provisto", ip, tipo, institucion || "-"]];
     
     await sheets.spreadsheets.values.append({
       spreadsheetId,
@@ -103,8 +103,7 @@ module.exports = async (req, res) => {
   if (req.method !== "POST") return res.status(200).json({ ok: false, error: "Método no permitido" });
 
   const { usuario, nip } = req.body || {};
-  if (!usuario || !nip) return res.status(400).json({ ok: false, error: "Faltan datos" });
-
+  
   const spreadsheetId = process.env.SPREADSHEET_ID;
   const auth = getClient();
   if (!auth || !spreadsheetId) return res.status(500).json({ ok: false, error: "Error de configuración" });
@@ -113,25 +112,39 @@ module.exports = async (req, res) => {
     const directorio = await leerHoja(auth, spreadsheetId, "Directorio!A:E");
     let institucion = null;
     let esAdmin = false;
+    let usuarioEncontrado = false;
 
+    // Validación detallada
     for (let i = 1; i < directorio.length; i++) {
       const fila = directorio[i];
       if (fila.length < 5) continue;
-      if (usuario === fila[3] && nip === fila[4]) {
-        institucion = fila[0];
-        esAdmin = (institucion === "Administrador");
-        break;
+      
+      if (usuario === fila[3]) {
+        usuarioEncontrado = true;
+        if (nip === fila[4]) {
+          institucion = fila[0];
+          esAdmin = (institucion === "Administrador");
+          break;
+        }
       }
+    }
+
+    // REGISTRO DE FALLOS (Usuario inexistente o NIP mal)
+    if (!usuarioEncontrado) {
+      registrarFallo(ip);
+      await registrarEnSheets(auth, spreadsheetId, usuario, ip, "Credenciales incorrectas (Usuario no existe)", "-");
+      return res.status(200).json({ ok: false, error: "Usuario o NIP incorrectos" });
     }
 
     if (!institucion) {
       registrarFallo(ip);
-      await registrarEnSheets(auth, spreadsheetId, usuario, ip, "Credenciales incorrectas", "-");
+      await registrarEnSheets(auth, spreadsheetId, usuario, ip, "Credenciales incorrectas (NIP erróneo)", "-");
       return res.status(200).json({ ok: false, error: "Usuario o NIP incorrectos" });
     }
 
-    const tipoRegistro = esAdmin ? "Administrador, Inicio de sesión exitoso" : "Usuario, Inicio de sesión exitoso";
-    await registrarEnSheets(auth, spreadsheetId, usuario, ip, tipoRegistro, institucion);
+    // REGISTRO DE ÉXITO (Administrador o Usuario)
+    const tipoFinal = esAdmin ? "Administrador, Inicio de sesión exitoso" : "Usuario, Inicio de sesión exitoso";
+    await registrarEnSheets(auth, spreadsheetId, usuario, ip, tipoFinal, institucion);
 
     const reportes = await leerHoja(auth, spreadsheetId, "Reportes de entrega!A:M");
     const headers = reportes[0] || [];
