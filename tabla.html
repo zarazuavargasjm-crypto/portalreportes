@@ -43,7 +43,7 @@
     <div id="paginacion"></div>
 </div>
 
-<div class="footer-firma">Manuel Zarazúa — abril 2026</div>
+<div class="footer-firma">Manuel Zarazúa — marzo 2026</div>
 
 <script>
 const data = JSON.parse(localStorage.getItem("reportes"));
@@ -60,25 +60,35 @@ document.getElementById("thead").innerHTML =
 let pagina = 1;
 const porPagina = 30;
 
-// FUNCIÓN PARA CONVERTIR "martes, 20 de enero de 2026" A OBJETO FECHA
-function parsearFechaEspañol(texto) {
+// FUNCIÓN MAESTRA: Detecta formato 20/1/2026 O martes, 20 de enero de 2026
+function obtenerFechaObjeto(texto) {
     if (!texto) return null;
+    const t = texto.toLowerCase().trim();
+
+    // Caso 1: Formato numérico 20/1/2026
+    if (t.includes('/') && !t.includes(' de ')) {
+        const p = t.split('/');
+        if (p.length === 3) {
+            return new Date(parseInt(p[2]), parseInt(p[1]) - 1, parseInt(p[0]));
+        }
+    }
+
+    // Caso 2: Formato texto "martes, 20 de enero de 2026"
     const meses = {
         "enero": 0, "febrero": 1, "marzo": 2, "abril": 3, "mayo": 4, "junio": 5,
         "julio": 6, "agosto": 7, "septiembre": 8, "octubre": 9, "noviembre": 10, "diciembre": 11
     };
-    
+
     try {
-        // Limpiamos el texto: quitamos el día de la semana y la palabra "de"
-        // Ejemplo: "martes, 20 de enero de 2026" -> ["20", "enero", "2026"]
-        const limpia = texto.toLowerCase().split(',').pop().replace(/de/g, '').trim();
-        const partes = limpia.split(/\s+/); // Divide por espacios
+        // Quitamos el día de la semana (si existe) y la palabra "de"
+        const limpia = t.split(',').pop().replace(/de/g, '').trim();
+        const partes = limpia.split(/\s+/); 
         
         if (partes.length >= 3) {
             const dia = parseInt(partes[0]);
-            const mes = meses[partes[1]];
+            const mes = meses[partes[1].trim()];
             const anio = parseInt(partes[2]);
-            return new Date(anio, mes, dia);
+            if (mes !== undefined) return new Date(anio, mes, dia);
         }
     } catch (e) {
         return null;
@@ -90,15 +100,17 @@ function verificarVisibilidad(fila) {
     const estatus = (fila[12] || "").trim(); // Columna M
     const fechaTexto = (fila[11] || "").trim(); // Columna L
 
+    // Si es Pendiente siempre se muestra
     if (estatus !== "Entregado") return true;
     
-    const fechaEntrega = parsearFechaEspañol(fechaTexto);
-    if (!fechaEntrega) return false;
+    const fechaEntrega = obtenerFechaObjeto(fechaTexto);
+    if (!fechaEntrega) return true; // Si no hay fecha o falla el parse, lo mostramos para no perder datos
 
     const hoy = new Date();
     const diferenciaMs = hoy - fechaEntrega;
     const treintaDiasMs = 30 * 24 * 60 * 60 * 1000;
 
+    // Solo se muestra si han pasado MENOS de 30 días
     return diferenciaMs <= treintaDiasMs;
 }
 
