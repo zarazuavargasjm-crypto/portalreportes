@@ -1,7 +1,7 @@
 const { google } = require("googleapis");
 
 // =========================
-// SEGURIDAD
+// SEGURIDAD (Sin cambios en tu lógica)
 // =========================
 const intentosFallidos = {};
 const bloqueosTemporales = {};
@@ -15,12 +15,12 @@ function getIP(req) {
   return forwarded ? forwarded.split(',')[0].trim() : req.socket.remoteAddress || "desconocida";
 }
 
-// FUNCIÓN AJUSTADA: Formato de registro solicitado
+// FUNCIÓN AJUSTADA: Formato de fecha y celdas individuales
 async function registrarEnSheets(auth, spreadsheetId, usuario, ip, tipo, institucion) {
   try {
     const sheets = google.sheets({ version: "v4", auth });
     
-    // Fecha y Hora en formato DD/MM/YYYY HH:MM:SS
+    // Formato de fecha: DD/MM/YYYY HH:MM:SS
     const ahora = new Date();
     const fechaMX = new Date(ahora.getTime() - (6 * 60 * 60 * 1000));
     const d = fechaMX.getDate().toString().padStart(2, '0');
@@ -32,7 +32,7 @@ async function registrarEnSheets(auth, spreadsheetId, usuario, ip, tipo, institu
     
     const fechaFormato = `${d}/${m}/${a} ${h}:${min}:${s}`;
     
-    // Se graban los datos como columnas individuales para que sigan tu formato exacto
+    // Cada elemento en el array interno es una celda (Columna A, B, C, D, E)
     const values = [[fechaFormato, usuario, ip, tipo, institucion]];
     
     await sheets.spreadsheets.values.append({
@@ -125,12 +125,14 @@ module.exports = async (req, res) => {
 
     if (!institucion) {
       registrarFallo(ip);
+      // Registro de incidente por credenciales
       await registrarEnSheets(auth, spreadsheetId, usuario, ip, "Credenciales incorrectas", "-");
       return res.status(200).json({ ok: false, error: "Usuario o NIP incorrectos" });
     }
 
-    // Registro con el formato solicitado
-    await registrarEnSheets(auth, spreadsheetId, usuario, ip, "Inicio de sesión exitoso", institucion);
+    // Registro de éxito con el tipo (Administrador o Usuario) y mensaje solicitado
+    const tipoRegistro = esAdmin ? "Administrador, Inicio de sesión exitoso" : "Usuario, Inicio de sesión exitoso";
+    await registrarEnSheets(auth, spreadsheetId, usuario, ip, tipoRegistro, institucion);
 
     const reportes = await leerHoja(auth, spreadsheetId, "Reportes de entrega!A:M");
     const headers = reportes[0] || [];
