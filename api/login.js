@@ -171,11 +171,11 @@ module.exports = async (req, res) => {
     const datosUsuario = filas.filter(f => f[5] === institucion);
 
     return res.status(200).json({
-      ok: true,
-      admin: false,
-      institucion,
-      headers,
-      reportes: datosUsuario
+        ok: true,
+        admin: false,
+        institucion,
+        headers,
+        reportes: datosUsuario
     });
 
   } catch (e) {
